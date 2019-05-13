@@ -1,0 +1,6 @@
+{
+  "name": "Etecsa Login Manager",
+  "description": "Login and Logout from etecsa.",
+  "uuid": "Etecsa_Login_Manager@danielpza@protonmail.com",
+  "shell-version": ["3.28.3"]
+}
