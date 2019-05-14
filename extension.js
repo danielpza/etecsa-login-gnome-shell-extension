@@ -40,7 +40,7 @@ function init() {
           .trim()
       );
     } catch (err) {
-      label.set_text(err.message);
+      label.set_text(err.message.trim().substr(0, 12));
     }
   });
 }
