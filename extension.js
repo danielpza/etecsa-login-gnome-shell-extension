@@ -5,6 +5,9 @@ const Main = imports.ui.main;
 const Mainloop = imports.mainloop;
 const St = imports.gi.St;
 
+const ON_CLASS = "etecsa-login-manager-on";
+const OFF_CLASS = "";
+
 function readline(stream, cb) {
   stream.read_line_async(GLib.PRIORITY_LOW, null, (source, res) => {
     let [out] = source.read_line_finish(res);
@@ -59,6 +62,7 @@ class LoginManager {
       can_focus: true
     });
     this.label = new St.Label({
+      style_class: OFF_CLASS,
       text: "--------"
     });
     this.bin.set_child(this.label);
@@ -84,7 +88,9 @@ class LoginManager {
   }
   async update() {
     const [isOnP, timeP] = [this.isOn(), run("etecsa time")];
-    this.label.set_text(((await isOnP) ? "C" : "D") + " " + (await timeP));
+    const [isOn, time] = [await isOnP, await timeP];
+    this.label.set_text((isOn ? "C" : "D") + " " + time);
+    this.label.style_class = isOn ? ON_CLASS : OFF_CLASS;
   }
 }
 
