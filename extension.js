@@ -5,6 +5,7 @@ const Main = imports.ui.main;
 const Mainloop = imports.mainloop;
 const St = imports.gi.St;
 
+const HOST_CLASS = "etecsa-login-manager-on-host";
 const ON_CLASS = "etecsa-login-manager-on";
 const ERROR_CLASS = "etecsa-login-manager-error";
 const OFF_CLASS = "";
@@ -71,6 +72,7 @@ class LoginManager {
       if (!this.working) this.toggle();
     });
     this.working = false;
+    this.host = false;
   }
   async isOn() {
     return (await run("etecsa status")) === "Connected";
@@ -78,8 +80,13 @@ class LoginManager {
   async toggle() {
     try {
       this.working = true;
-      if (await this.isOn()) await run("etecsa logout");
-      else await run("etecsa login");
+      if (await this.isOn()) {
+        await run("etecsa logout");
+        this.host = false;
+      } else {
+        await run("etecsa login");
+        this.host = true;
+      }
       await this.update();
       this.working = false;
     } catch (err) {
@@ -91,8 +98,13 @@ class LoginManager {
   async update() {
     const [isOnP, timeP] = [this.isOn(), run("etecsa time")];
     const [isOn, time] = [await isOnP, await timeP];
+    if (!isOn) this.host = false;
     this.label.set_text((isOn ? "C" : "D") + " " + time);
-    this.label.style_class = isOn ? ON_CLASS : OFF_CLASS;
+    this.label.style_class = isOn
+      ? this.host
+        ? HOST_CLASS
+        : ON_CLASS
+      : OFF_CLASS;
   }
 }
 
