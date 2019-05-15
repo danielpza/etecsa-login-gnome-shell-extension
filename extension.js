@@ -171,7 +171,7 @@ class LoginManager {
     this.draw();
   }
   async draw() {
-    this.label.set_text((this.on ? "C" : "D") + " " + timeToString(this.time));
+    this.label.set_text(timeToString(this.time));
     this.label.style_class = this.on
       ? this.host
         ? HOST_CLASS
