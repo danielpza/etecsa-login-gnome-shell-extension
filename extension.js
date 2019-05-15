@@ -5,6 +5,7 @@ const Main = imports.ui.main;
 const Mainloop = imports.mainloop;
 const St = imports.gi.St;
 
+const OTHER_CLASS = "etecsa-login-manager-on-other";
 const HOST_CLASS = "etecsa-login-manager-on-host";
 const ON_CLASS = "etecsa-login-manager-on";
 const ERROR_CLASS = "etecsa-login-manager-error";
@@ -176,7 +177,9 @@ class LoginManager {
     this.label.style_class = this.on
       ? this.host
         ? HOST_CLASS
-        : ON_CLASS
+        : this.decreasing
+        ? ON_CLASS
+        : OTHER_CLASS
       : OFF_CLASS;
   }
 }
