@@ -137,37 +137,43 @@ class LoginManager {
       this.draw();
       if (await this.isOn()) {
         await run("etecsa logout");
-        this.host = false;
+        this.on = this.decreasing = this.host = false;
+        this.working = false;
+        await this.update(true);
       } else {
         await run("etecsa login");
-        this.host = true;
+        this.on = this.decreasing = this.host = true;
+        this.clock.start();
+        this.working = false;
+        this.draw();
       }
-      this.working = false;
-      await this.update();
     } catch (err) {
       this.label.set_text("Error");
       this.label.style_class = ERROR_CLASS;
       this.working = false;
     }
   }
-  async update() {
-    const [isOnP, timeP] = [this.isOn(), run("etecsa time")];
-    const [isOn, time] = [await isOnP, await timeP];
-    if (time === "00:00:00") this.decreasing = false;
+  async update(skipCheck = false) {
+    const time = await run("etecsa time");
+    if (skipCheck || time === "00:00:00") this.decreasing = false;
     else this.decreasing = time < this.prevtime;
     this.prevtime = time;
     this.time = parseTime(time);
-    this.on = isOn;
-    if (!this.on) {
-      this.host = false;
-      this.decreasing = false;
-      this.clock.stop();
-    }
     if (this.host) {
       this.decreasing = true;
     }
     if (this.decreasing) {
       this.clock.start();
+    }
+    this.draw();
+  }
+  async updateConnection() {
+    const isOn = await this.isOn();
+    this.on = isOn;
+    if (!this.on) {
+      this.host = false;
+      this.decreasing = false;
+      this.clock.stop();
     }
     this.draw();
   }
@@ -188,6 +194,10 @@ let interval = new Timer(60.0, () => {
   manager.update();
   return true;
 });
+let intervalConnection = new Timer(10.0, () => {
+  manager.updateConnection();
+  return true;
+});
 
 function init() {
   manager = new LoginManager();
@@ -198,7 +208,9 @@ function enable() {
   if (manager) {
     Main.panel._rightBox.insert_child_at_index(manager.bin, 0);
     manager.update();
+    manager.updateConnection();
     interval.start();
+    intervalConnection.start();
   }
 }
 
@@ -206,5 +218,6 @@ function disable() {
   if (manager) {
     Main.panel._rightBox.remove_child(manager.bin);
     interval.stop();
+    intervalConnection.stop();
   }
 }
