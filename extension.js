@@ -108,7 +108,7 @@ class LoginManager {
     });
     this.label = new St.Label({
       style_class: OFF_CLASS,
-      text: "--------"
+      text: "00:00:00"
     });
     this.bin.set_child(this.label);
     this.bin.connect("button-press-event", () => {
@@ -134,6 +134,7 @@ class LoginManager {
   async toggle() {
     try {
       this.working = true;
+      this.draw();
       if (await this.isOn()) {
         await run("etecsa logout");
         this.host = false;
@@ -141,8 +142,8 @@ class LoginManager {
         await run("etecsa login");
         this.host = true;
       }
-      await this.update();
       this.working = false;
+      await this.update();
     } catch (err) {
       this.label.set_text("Error");
       this.label.style_class = ERROR_CLASS;
@@ -171,7 +172,7 @@ class LoginManager {
     this.draw();
   }
   async draw() {
-    this.label.set_text(timeToString(this.time));
+    this.label.set_text((this.working ? "W " : "") + timeToString(this.time));
     this.label.style_class = this.on
       ? this.host
         ? HOST_CLASS
