@@ -1,6 +1,7 @@
 const St = imports.gi.St;
 const Main = imports.ui.main;
 const GLib = imports.gi.GLib;
+const Mainloop = imports.mainloop;
 
 function run(command) {
   let [, out, err, status] = GLib.spawn_command_line_sync(command);
@@ -43,7 +44,8 @@ class LoginManager {
   }
 }
 
-let manager = null;
+let manager = null,
+  timeout = null;
 
 function init() {
   manager = new LoginManager();
@@ -51,9 +53,15 @@ function init() {
 }
 
 function enable() {
-  if (manager) Main.panel._rightBox.insert_child_at_index(manager.bin, 0);
+  if (manager) {
+    Main.panel._rightBox.insert_child_at_index(manager.bin, 0);
+    timeout = Mainloop.timeout_add_seconds(60.0, () => manager.update());
+  }
 }
 
 function disable() {
-  if (manager) Main.panel._rightBox.remove_child(manager.bin);
+  if (manager) {
+    Main.panel._rightBox.remove_child(manager.bin);
+    Mainloop.source_remove(timeout);
+  }
 }
