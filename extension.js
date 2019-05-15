@@ -90,7 +90,7 @@ class LoginManager {
       await this.update();
       this.working = false;
     } catch (err) {
-      this.label.set_text(err.message.trim().substr(0, 12));
+      this.label.set_text("Error");
       this.label.style_class = ERROR_CLASS;
       this.working = false;
     }
