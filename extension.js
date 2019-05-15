@@ -7,16 +7,16 @@ let button;
 function run(command) {
   let [, out, err, status] = GLib.spawn_command_line_sync(command);
   if (status !== 0) throw new Error(err);
-  return out;
+  return out.toString().trim();
+}
+
+function isOn() {
+  return run("etecsa status") === "Connected";
 }
 
 function toggle() {
-  const status = run("etecsa status");
-  if (status == "Connected\n") {
-    return run("etecsa logout");
-  } else {
-    return run("etecsa login");
-  }
+  if (isOn()) return run("etecsa logout");
+  else return run("etecsa login");
 }
 
 function init() {
@@ -34,15 +34,16 @@ function init() {
   button.set_child(label);
   button.connect("button-press-event", () => {
     try {
-      label.set_text(
-        toggle()
-          .toString()
-          .trim()
-      );
+      toggle();
+      update();
     } catch (err) {
       label.set_text(err.message.trim().substr(0, 12));
     }
   });
+  update();
+  function update() {
+    label.set_text((isOn() ? "C" : "D") + " " + run("etecsa time"));
+  }
 }
 
 function enable() {
