@@ -8,6 +8,7 @@ gnome shell extension for etecsa login
 
 Click to login or logout
 
+- _Blue_: Connected but your account is not used, turns to yellow if it is indeed your account
 - _Green_: you are connected
 - _Yellow_: connected through another interface
 - _Normal_: disconnected
