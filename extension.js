@@ -2,54 +2,58 @@ const St = imports.gi.St;
 const Main = imports.ui.main;
 const GLib = imports.gi.GLib;
 
-let button;
-
 function run(command) {
   let [, out, err, status] = GLib.spawn_command_line_sync(command);
   if (status !== 0) throw new Error(err);
   return out.toString().trim();
 }
 
-function isOn() {
-  return run("etecsa status") === "Connected";
-}
-
-function toggle() {
-  if (isOn()) return run("etecsa logout");
-  else return run("etecsa login");
-}
-
-function init() {
-  button = new St.Bin({
-    style_class: "panel-button",
-    reactive: true,
-    x_fill: true,
-    y_fill: false,
-    track_hover: true,
-    can_focus: true
-  });
-  const label = new St.Label({
-    text: "--------"
-  });
-  button.set_child(label);
-  button.connect("button-press-event", () => {
+class LoginManager {
+  constructor() {
+    this.bin = new St.Bin({
+      style_class: "panel-button",
+      reactive: true,
+      x_fill: true,
+      y_fill: false,
+      track_hover: true,
+      can_focus: true
+    });
+    this.label = new St.Label({
+      text: "--------"
+    });
+    this.bin.set_child(this.label);
+    this.bin.connect("button-press-event", () => {
+      this.toggle();
+    });
+  }
+  isOn() {
+    return run("etecsa status") === "Connected";
+  }
+  toggle() {
     try {
-      toggle();
-      update();
+      if (this.isOn()) run("etecsa logout");
+      else run("etecsa login");
+      this.update();
     } catch (err) {
-      label.set_text(err.message.trim().substr(0, 12));
+      this.label.set_text(err.message.trim().substr(0, 12));
     }
-  });
-  update();
-  function update() {
-    label.set_text((isOn() ? "C" : "D") + " " + run("etecsa time"));
+  }
+  update() {
+    this.label.set_text((this.isOn() ? "C" : "D") + " " + run("etecsa time"));
   }
 }
 
+let manager = null;
+
+function init() {
+  manager = new LoginManager();
+  manager.update();
+}
+
 function enable() {
-  Main.panel._rightBox.insert_child_at_index(button, 0);
+  if (manager) Main.panel._rightBox.insert_child_at_index(manager.bin, 0);
 }
 
 function disable() {
-  Main.panel._rightBox.remove_child(button);
+  if (manager) Main.panel._rightBox.remove_child(manager.bin);
 }
