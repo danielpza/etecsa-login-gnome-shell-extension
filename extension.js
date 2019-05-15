@@ -6,6 +6,7 @@ const Mainloop = imports.mainloop;
 const St = imports.gi.St;
 
 const ON_CLASS = "etecsa-login-manager-on";
+const ERROR_CLASS = "etecsa-login-manager-error";
 const OFF_CLASS = "";
 
 function readline(stream, cb) {
@@ -83,6 +84,7 @@ class LoginManager {
       this.working = false;
     } catch (err) {
       this.label.set_text(err.message.trim().substr(0, 12));
+      this.label.style_class = ERROR_CLASS;
       this.working = false;
     }
   }

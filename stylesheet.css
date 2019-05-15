@@ -1,3 +1,7 @@
 .etecsa-login-manager-on {
   color: #2ffc7a;
 }
+
+.etecsa-login-manager-error {
+  color: #f2323f;
+}
