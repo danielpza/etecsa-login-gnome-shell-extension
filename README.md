@@ -2,6 +2,17 @@
 
 gnome shell extension for etecsa login
 
+![Preview](./preview.png)
+
+## Usage
+
+Click to login or logout
+
+- _Green_: you are connected
+- _Yellow_: connected through another interface
+- _Normal_: disconnected
+- _Red_: error
+
 ## Dependencies
 
 - npm
