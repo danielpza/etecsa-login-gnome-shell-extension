@@ -1,12 +1,51 @@
-const St = imports.gi.St;
-const Main = imports.ui.main;
 const GLib = imports.gi.GLib;
+const Gio = imports.gi.Gio;
+const Lang = imports.lang;
+const Main = imports.ui.main;
 const Mainloop = imports.mainloop;
+const St = imports.gi.St;
 
-function run(command) {
-  let [, out, err, status] = GLib.spawn_command_line_sync(command);
-  if (status !== 0) throw new Error(err);
-  return out.toString().trim();
+function readline(stream, cb) {
+  stream.read_line_async(GLib.PRIORITY_LOW, null, (source, res) => {
+    let [out] = source.read_line_finish(res);
+    if (out !== null) {
+      cb(out);
+    }
+  });
+}
+
+function getStream(command) {
+  let [, , , stdout, stderr] = GLib.spawn_async_with_pipes(
+    ".",
+    ["/usr/bin/env"].concat(command.split(" ")),
+    null,
+    GLib.SpawnFlags.SEARCH_PATH,
+    null
+  );
+  let outstream = new Gio.DataInputStream({
+    base_stream: new Gio.UnixInputStream({ fd: stdout })
+  });
+  let errstream = new Gio.DataInputStream({
+    base_stream: new Gio.UnixInputStream({ fd: stderr })
+  });
+  return [outstream, errstream];
+}
+
+async function run(command) {
+  return new Promise((s, r) => {
+    const [outstream, errstream] = getStream(command);
+    let ignore = false;
+    readline(outstream, line => {
+      if (ignore) return;
+      ignore = true;
+      s(line.toString().trim());
+    });
+    readline(errstream, line => {
+      if (ignore) return;
+      ignore = true;
+      r(new Error(line.toString().trim()));
+    });
+  });
 }
 
 class LoginManager {
@@ -24,23 +63,28 @@ class LoginManager {
     });
     this.bin.set_child(this.label);
     this.bin.connect("button-press-event", () => {
-      this.toggle();
+      if (!this.working) this.toggle();
     });
+    this.working = false;
   }
-  isOn() {
-    return run("etecsa status") === "Connected";
+  async isOn() {
+    return (await run("etecsa status")) === "Connected";
   }
-  toggle() {
+  async toggle() {
     try {
-      if (this.isOn()) run("etecsa logout");
-      else run("etecsa login");
-      this.update();
+      this.working = true;
+      if (await this.isOn()) await run("etecsa logout");
+      else await run("etecsa login");
+      await this.update();
+      this.working = false;
     } catch (err) {
       this.label.set_text(err.message.trim().substr(0, 12));
+      this.working = false;
     }
   }
-  update() {
-    this.label.set_text((this.isOn() ? "C" : "D") + " " + run("etecsa time"));
+  async update() {
+    const [isOnP, timeP] = [this.isOn(), run("etecsa time")];
+    this.label.set_text(((await isOnP) ? "C" : "D") + " " + (await timeP));
   }
 }
 
