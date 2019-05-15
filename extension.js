@@ -10,6 +10,48 @@ const ON_CLASS = "etecsa-login-manager-on";
 const ERROR_CLASS = "etecsa-login-manager-error";
 const OFF_CLASS = "";
 
+class Interval {
+  constructor(timeout, cb) {
+    this.timeout = timeout;
+    this.cb = cb;
+    this.timer = null;
+  }
+  start() {
+    if (this.timer === null)
+      this.timer = Mainloop.timeout_add_seconds(this.timeout, this.cb);
+  }
+  stop() {
+    if (this.timer !== null) {
+      Mainloop.source_remove(this.timer);
+      this.timer = null;
+    }
+  }
+}
+
+function parseTime(timestr) {
+  return timestr.split(":").map(el => parseInt(el));
+}
+
+function decreaseTime([hours, min, sec], amount = 1) {
+  sec -= amount;
+  if (sec < 0) {
+    sec += 60;
+    min--;
+  }
+  if (min < 0) {
+    min += 60;
+    hours--;
+  }
+  if (hours < 0) return [0, 0, 0];
+  return [hours, min, sec];
+}
+
+function timeToString(time) {
+  return time
+    .map(el => (el < 10 ? "0" + el.toString() : el.toString()))
+    .join(":");
+}
+
 function readline(stream, cb) {
   stream.read_line_async(GLib.PRIORITY_LOW, null, (source, res) => {
     let [out] = source.read_line_finish(res);
@@ -71,8 +113,21 @@ class LoginManager {
     this.bin.connect("button-press-event", () => {
       if (!this.working) this.toggle();
     });
+    this.prevtime = "00:00:00";
+    this.time = [0, 0, 0];
     this.working = false;
     this.host = false;
+    this.on = false;
+    this.clock = new Interval(1.0, () => this.tick());
+    this.decreasing = false;
+  }
+  tick() {
+    if (!this.decreasing) return;
+    this.time = decreaseTime(this.time);
+    this.draw();
+    // FIXME why is this needed?
+    this.clock.stop();
+    this.clock.start();
   }
   async isOn() {
     return (await run("etecsa status")) === "Connected";
@@ -98,9 +153,27 @@ class LoginManager {
   async update() {
     const [isOnP, timeP] = [this.isOn(), run("etecsa time")];
     const [isOn, time] = [await isOnP, await timeP];
-    if (!isOn) this.host = false;
-    this.label.set_text((isOn ? "C" : "D") + " " + time);
-    this.label.style_class = isOn
+    if (time === "00:00:00") this.decreasing = false;
+    else this.decreasing = time < this.prevtime;
+    this.prevtime = time;
+    this.time = parseTime(time);
+    this.on = isOn;
+    if (!this.on) {
+      this.host = false;
+      this.decreasing = false;
+      this.clock.stop();
+    }
+    if (this.host) {
+      this.decreasing = true;
+    }
+    if (this.decreasing) {
+      this.clock.start();
+    }
+    this.draw();
+  }
+  async draw() {
+    this.label.set_text((this.on ? "C" : "D") + " " + timeToString(this.time));
+    this.label.style_class = this.on
       ? this.host
         ? HOST_CLASS
         : ON_CLASS
@@ -108,8 +181,8 @@ class LoginManager {
   }
 }
 
-let manager = null,
-  timeout = null;
+let manager = null;
+let interval = new Interval(60.0, () => manager.update());
 
 function init() {
   manager = new LoginManager();
@@ -119,13 +192,14 @@ function init() {
 function enable() {
   if (manager) {
     Main.panel._rightBox.insert_child_at_index(manager.bin, 0);
-    timeout = Mainloop.timeout_add_seconds(60.0, () => manager.update());
+    manager.update();
+    interval.start();
   }
 }
 
 function disable() {
   if (manager) {
     Main.panel._rightBox.remove_child(manager.bin);
-    Mainloop.source_remove(timeout);
+    interval.stop();
   }
 }
