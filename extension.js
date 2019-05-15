@@ -11,7 +11,7 @@ const ON_CLASS = "etecsa-login-manager-on";
 const ERROR_CLASS = "etecsa-login-manager-error";
 const OFF_CLASS = "";
 
-class Interval {
+class Timer {
   constructor(timeout, cb) {
     this.timeout = timeout;
     this.cb = cb;
@@ -119,16 +119,14 @@ class LoginManager {
     this.working = false;
     this.host = false;
     this.on = false;
-    this.clock = new Interval(1.0, () => this.tick());
+    this.clock = new Timer(1.0, () => this.tick());
     this.decreasing = false;
   }
   tick() {
-    if (!this.decreasing) return;
+    if (!this.decreasing) return false;
     this.time = decreaseTime(this.time);
     this.draw();
-    // FIXME why is this needed?
-    this.clock.stop();
-    this.clock.start();
+    return true;
   }
   async isOn() {
     return (await run("etecsa status")) === "Connected";
@@ -185,7 +183,10 @@ class LoginManager {
 }
 
 let manager = null;
-let interval = new Interval(60.0, () => manager.update());
+let interval = new Timer(60.0, () => {
+  manager.update();
+  return true;
+});
 
 function init() {
   manager = new LoginManager();
