@@ -1,5 +1,7 @@
 # Etecsa Login Gnome Shell Extension
 
+NO LONGER MAINTAINED, feel free to fork it and send an email if you want to take over the project
+
 gnome shell extension for etecsa login
 
 ![Preview](./preview.png)
